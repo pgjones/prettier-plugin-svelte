@@ -1,4 +1,5 @@
 import { SupportOption } from 'prettier';
+import { TagName, allElements, preformattedElements, inlineElements } from './lib/elements';
 
 declare module 'prettier' {
     interface RequiredOptions extends PluginOptions {}
@@ -9,6 +10,8 @@ export interface PluginOptions {
     svelteStrictMode: boolean;
     svelteBracketNewLine: boolean;
     svelteAllowShorthand: boolean;
+    inlineElements: TagName[],
+    preformattedElements: TagName[];
 }
 
 export const options: Record<keyof PluginOptions, SupportOption> = {
@@ -35,11 +38,32 @@ export const options: Record<keyof PluginOptions, SupportOption> = {
         default: false,
         description: 'Put the `>` of a multiline element on a new line',
     },
+<<<<<<< HEAD
     svelteAllowShorthand: {
         type: 'boolean',
         default: true,
         description: 'Option to enable/disable component attribute shorthand if attribute name and expressions are same',
     },
+=======
+    inlineElements: {
+        type: 'choice',
+        // @ts-ignore -- typings for `SupportOption` doesn't support arrays even though that's a valid type
+        // https://github.com/prettier/prettier/blob/3654108ebe028fbc3063ceccb3c4ce0d4164510a/src/main/core-options.js#L167-L178
+        default: [{ value: inlineElements }],
+        description: 'In Svelte templates, elements whose tags will be treated as part of inline node sequences that will not be hard-wrapped.',
+        array: true,
+        choices: allElements.map(value => ({ value }))
+    },
+    preformattedElements: {
+        type: 'choice',
+        // @ts-ignore -- typings for `SupportOption` doesn't support arrays even though that's a valid type
+        // https://github.com/prettier/prettier/blob/3654108ebe028fbc3063ceccb3c4ce0d4164510a/src/main/core-options.js#L167-L178
+        default: [{ value: preformattedElements }],
+        description: 'In Svelte templates, elements whose tag contents will be treated as preformatted, preventing whitespace sequences from being collapsed.',
+        array: true,
+        choices: allElements.map(value => ({ value }))
+    }
+>>>>>>> Configure options for tag handling
 };
 
 export type SortOrder =
