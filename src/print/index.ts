@@ -1,6 +1,6 @@
 import { FastPath, Doc, doc, ParserOptions } from 'prettier';
 import { Node, IdentifierNode, MustacheTagNode, IfBlockNode, EachBlockNode } from './nodes';
-import { isASTNode } from './helpers';
+import { isASTNode, isPreTagContent } from './helpers';
 import { extractAttributes } from '../lib/extractAttributes';
 import { getText } from '../lib/getText';
 import { parseSortOrder, SortOrderPart } from '../options';
@@ -113,8 +113,12 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
                 return '';
             }
 
-            return concat([printChildren(path, print, false), hardline]);
+            return concat([printChildren(path, print, options, false), hardline]);
         case 'Text':
+            if (isPreTagContent(path, options)) {
+                return node.data;
+            }
+
             if (isEmptyNode(node)) {
                 return {
                     /**
@@ -185,7 +189,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
 
                     isSelfClosingTag ? `${options.svelteBracketNewLine ? '' : ' '}/>` : '>',
 
-                    isEmpty ? '' : indent(printChildren(path, print)),
+                    isEmpty ? '' : indent(printChildren(path, print, options)),
 
                     isSelfClosingTag ? '' : concat(['</', node.name, '>']),
                 ]),
@@ -249,7 +253,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
                 '{#if ',
                 printJS(path, print, 'expression'),
                 '}',
-                indent(printChildren(path, print)),
+                indent(printChildren(path, print, options)),
             ];
 
             if (node.else) {
@@ -274,7 +278,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
                     '{:else if ',
                     path.map(ifPath => printJS(path, print, 'expression'), 'children')[0],
                     '}',
-                    indent(path.map(ifPath => printChildren(ifPath, print), 'children')[0]),
+                    indent(path.map(ifPath => printChildren(ifPath, print, options), 'children')[0]),
                 ];
 
                 if (ifNode.else) {
@@ -283,7 +287,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
                 return group(concat(def));
             }
 
-            return group(concat(['{:else}', indent(printChildren(path, print))]));
+            return group(concat(['{:else}', indent(printChildren(path, print, options))]));
         }
         case 'EachBlock': {
             const def: Doc[] = [
@@ -301,7 +305,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
                 def.push(' (', printJS(path, print, 'key'), ')');
             }
 
-            def.push('}', indent(printChildren(path, print)));
+            def.push('}', indent(printChildren(path, print, options)));
 
             if (node.else) {
                 def.push(path.call(print, 'else'));
@@ -360,7 +364,7 @@ export function print(path: FastPath, options: ParserOptions, print: PrintFn): D
         case 'ThenBlock':
         case 'PendingBlock':
         case 'CatchBlock':
-            return printChildren(path, print);
+            return printChildren(path, print, options);
         case 'EventHandler':
             return concat([
                 line,
@@ -552,7 +556,11 @@ function trimRight(group: Doc[]): void {
     last.parts.reverse();
 }
 
-function printChildren(path: FastPath, print: PrintFn, surroundingLines = true): Doc {
+function printChildren(path: FastPath, print: PrintFn, options: ParserOptions, surroundingLines = true): Doc {
+    if (isPreTagContent(path, options)) {
+        return concat(path.map(print, 'children'));
+    }
+
     const childDocs: Doc[] = [];
     let currentGroup: Doc[] = [];
 
